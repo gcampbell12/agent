@@ -145,14 +145,14 @@ func (d *Discovery) Refresh(_ context.Context) ([]*targetgroup.Group, error) {
 	}
 
 	// Unmarshal the response body into a pod list
-	var pods v1.PodList
-	if err := json.Unmarshal(body, &pods); err != nil {
+	var podList v1.PodList
+	if err := json.Unmarshal(body, &podList); err != nil {
 		return nil, fmt.Errorf("error unmarshaling response body: %v", err)
 	}
 
 	// Create a list of targets from the pods
 	var targetGroups []*targetgroup.Group
-	for _, pod := range pods.Items {
+	for _, pod := range podList.Items {
 		// Skip pods that are not in the one of the desired namespaces
 		if len(d.targetNamespaces) > 0 && !d.podInTargetNamespaces(pod) {
 			continue

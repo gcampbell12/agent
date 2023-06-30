@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-kit/log/level"
 	"io"
 	"net"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/log"
 	"github.com/grafana/agent/component"
 	"github.com/grafana/agent/component/common/config"
 	"github.com/grafana/agent/component/discovery"
@@ -98,7 +100,7 @@ func (args *Arguments) Validate() error {
 func New(opts component.Options, args Arguments) (*discovery.Component, error) {
 	return discovery.New(opts, args, func(args component.Arguments) (discovery.Discoverer, error) {
 		newArgs := args.(Arguments)
-		kubeletDiscovery, err := NewKubeletDiscovery(newArgs)
+		kubeletDiscovery, err := NewKubeletDiscovery(opts.Logger, newArgs)
 		if err != nil {
 			return nil, err
 		}
@@ -114,12 +116,13 @@ type Discovery struct {
 	client           *http.Client
 	url              string
 	targetNamespaces []string
+	logger           log.Logger
 
 	// cache of pod sources from the last discovery refresh
 	discoveredPodSources map[string]bool
 }
 
-func NewKubeletDiscovery(args Arguments) (*Discovery, error) {
+func NewKubeletDiscovery(logger log.Logger, args Arguments) (*Discovery, error) {
 	transport, err := commonConfig.NewRoundTripperFromConfig(*args.HTTPClientConfig.Convert(), "kubelet_sd")
 	if err != nil {
 		return nil, err
@@ -134,6 +137,7 @@ func NewKubeletDiscovery(args Arguments) (*Discovery, error) {
 		client:           client,
 		url:              args.URL.String(),
 		targetNamespaces: args.Namespaces,
+		logger:           logger,
 	}, nil
 }
 
@@ -179,13 +183,16 @@ func (d *Discovery) refresh(podList v1.PodList) ([]*targetgroup.Group, error) {
 			continue
 		}
 		tg := d.buildPodTargetGroup(pod)
+		level.Info(d.logger).Log("msg", "discovered pod", "pod", tg.Source)
 		targetGroups = append(targetGroups, tg)
 		discovered[tg.Source] = true
 	}
 
 	// check for pods that were present in the last refresh but not in this one
 	for k := range d.discoveredPodSources {
+		level.Info(d.logger).Log("msg", "checking if pod was removed", "pod", k)
 		if _, ok := discovered[k]; !ok {
+			level.Info(d.logger).Log("msg", "pod was removed, adding empty target", "pod", k)
 			// append a target group with no targets to indicate the pod was removed and
 			// should not be scraped
 			targetGroups = append(targetGroups, &targetgroup.Group{
@@ -196,6 +203,7 @@ func (d *Discovery) refresh(podList v1.PodList) ([]*targetgroup.Group, error) {
 	// update the list of discovered pods
 	d.discoveredPodSources = discovered
 
+	level.Info(d.logger).Log("msg", "discovered pods", "count", len(targetGroups))
 	return targetGroups, nil
 }
 

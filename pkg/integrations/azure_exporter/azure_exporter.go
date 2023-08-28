@@ -71,14 +71,20 @@ func (e Exporter) MetricsHandler() (http.Handler, error) {
 		prober.SetPrometheusRegistry(reg)
 		prober.SetAzureResourceTagManager(tagManager)
 
-		err = prober.ServiceDiscovery.FindResourceGraph(ctx, settings.Subscriptions, settings.ResourceType, settings.Filter)
-		if err != nil {
-			e.logger.Error(fmt.Errorf("service discovery failed, %v", err))
-			http.Error(resp, "Failed to discovery azure resources", http.StatusInternalServerError)
-			return
+		if !mergedConfig.SubscriptionScope {
+			err = prober.ServiceDiscovery.FindResourceGraph(ctx, settings.Subscriptions, settings.ResourceType, settings.Filter)
+			if err != nil {
+				e.logger.Error(fmt.Errorf("service discovery failed, %v", err))
+				http.Error(resp, "Failed to discovery azure resources", http.StatusInternalServerError)
+				return
+			}
 		}
 
-		prober.Run()
+		if mergedConfig.SubscriptionScope {
+			prober.RunOnSubscriptionScope()
+		} else {
+			prober.Run()
+		}
 
 		promhttp.HandlerFor(reg, promhttp.HandlerOpts{}).ServeHTTP(resp, req)
 	})

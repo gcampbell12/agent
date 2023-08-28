@@ -70,6 +70,9 @@ type Config struct {
 	MetricHelpTemplate string `yaml:"metric_help_template"`
 
 	AzureCloudEnvironment string `yaml:"azure_cloud_environment"`
+
+	Regions           []string `yaml:"regions"`
+	SubscriptionScope bool     `yaml:"subscription_scope"`
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler for Config.
@@ -140,6 +143,10 @@ func (c *Config) Validate() error {
 		configErrors = append(configErrors, fmt.Errorf("failed to create an azure cloud configuration from azure cloud environment %s, %v", c.AzureCloudEnvironment, err).Error())
 	}
 
+	if c.SubscriptionScope && len(c.Regions) == 0 {
+		configErrors = append(configErrors, "regions cannot be empty when subscription_scope is true")
+	}
+
 	if len(configErrors) != 0 {
 		return errors.New(strings.Join(configErrors, ","))
 	}
@@ -199,6 +206,10 @@ func (c *Config) ToScrapeSettings() (*metrics.RequestMetricSettings, error) {
 		// cause an OOM from the API
 		settings.MetricTop = to.Ptr[int32](100_000_000)
 		settings.MetricOrderBy = "" // Order is only relevant if top won't return all the results our high value should prevent this
+	}
+
+	if c.SubscriptionScope && len(c.Regions) > 0 {
+		settings.Regions = c.Regions
 	}
 	return &settings, nil
 }

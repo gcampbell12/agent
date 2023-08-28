@@ -136,6 +136,13 @@ The account used by Grafana Agent needs:
 
   # Optional: Which azure cloud environment to connect to, azurecloud, azurechinacloud, azuregovernmentcloud, or azurepprivatecloud
   [azure_cloud_environment: <string> | default = "azurecloud"]
+
+  # Optional: Whether to scrape metrics at the subscription scope rather than the resource scope.
+  # For example 'microsoft.resources/subscriptions' must be scraped from the subscription scope.
+  subscription_scope: <boolean>
+
+  # Optional: The regions to scrape, only applicable when subscription_scope is true.
+  [regions: <string>]
 ```
 
 ### Examples

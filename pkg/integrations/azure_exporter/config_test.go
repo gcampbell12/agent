@@ -96,6 +96,18 @@ func TestConfig_ToScrapeSettings(t *testing.T) {
 				return settings
 			},
 		},
+		{
+			name: "can set prober to run at subscription scope",
+			configModifier: func(config azure_exporter.Config) azure_exporter.Config {
+				config.SubscriptionScope = true
+				config.Regions = []string{"eastus"}
+				return config
+			},
+			toExpectedSettings: func(settings metrics.RequestMetricSettings) metrics.RequestMetricSettings {
+				settings.Regions = []string{"eastus"}
+				return settings
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -174,6 +186,13 @@ func TestConfig_Validate(t *testing.T) {
 			name: "invalid azure_cloud_environment",
 			toInvalidConfig: func(config azure_exporter.Config) azure_exporter.Config {
 				config.AzureCloudEnvironment = "Not Real"
+				return config
+			},
+		},
+		{
+			name: "nil regions with subscription scope",
+			toInvalidConfig: func(config azure_exporter.Config) azure_exporter.Config {
+				config.SubscriptionScope = true
 				return config
 			},
 		},

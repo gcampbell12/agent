@@ -235,6 +235,10 @@ func TestMergeConfigWithQueryParams_MapsAllExpectedFieldsByYamlNameFromConfig(t 
 				value := []string{"fake string 1", "fake string 2"}
 				fieldValue = value
 				urlParams[yamlFieldName] = value
+			case "bool":
+				value := true
+				fieldValue = value
+				urlParams[yamlFieldName] = []string{fmt.Sprintf("%t", true)}
 			default:
 				t.Fatalf("Attempting to map %s, discovered unexpected type %s", mappableField.Name, mappableField.Type.String())
 			}

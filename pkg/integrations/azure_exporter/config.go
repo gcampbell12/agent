@@ -267,6 +267,15 @@ func MergeConfigWithQueryParams(cfg Config, params url.Values) Config {
 		cfg.MetricHelpTemplate = helpTemplate
 	}
 
+	subscriptionScope := params.Get("subscription_scope")
+	if subscriptionScope == "true" {
+		cfg.SubscriptionScope = true
+	}
+
+	if regions, exists := params["regions"]; exists {
+		cfg.Regions = regions
+	}
+
 	return cfg
 }
 

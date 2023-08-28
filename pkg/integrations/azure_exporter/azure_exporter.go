@@ -71,7 +71,12 @@ func (e Exporter) MetricsHandler() (http.Handler, error) {
 		prober.SetPrometheusRegistry(reg)
 		prober.SetAzureResourceTagManager(tagManager)
 
-		if !mergedConfig.SubscriptionScope {
+		subscriptionScope := false
+		if len(mergedConfig.Regions) > 0 {
+			subscriptionScope = true
+		}
+
+		if !subscriptionScope {
 			err = prober.ServiceDiscovery.FindResourceGraph(ctx, settings.Subscriptions, settings.ResourceType, settings.Filter)
 			if err != nil {
 				e.logger.Error(fmt.Errorf("service discovery failed, %v", err))
@@ -80,7 +85,7 @@ func (e Exporter) MetricsHandler() (http.Handler, error) {
 			}
 		}
 
-		if mergedConfig.SubscriptionScope {
+		if subscriptionScope {
 			prober.RunOnSubscriptionScope()
 		} else {
 			prober.Run()
